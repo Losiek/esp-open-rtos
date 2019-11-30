@@ -45,12 +45,12 @@
 
 // I2C interface defintions for ESP32 and ESP8266
 #define I2C_BUS       0
-#define I2C_SCL_PIN   14
-#define I2C_SDA_PIN   13
+#define I2C_SCL_PIN   4
+#define I2C_SDA_PIN   5
 #define I2C_FREQ      I2C_FREQ_100K
 
 // interrupt GPIOs defintions for ESP8266 and ESP32
-#define nINT_PIN      13
+#define nINT_PIN      0
 
 /* -- user tasks --------------------------------------------------- */
 

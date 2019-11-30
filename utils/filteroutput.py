@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 #
 # A thin Python wrapper around addr2line, can monitor esp-open-rtos
 # output and uses gdb to convert any suitable looking hex numbers
@@ -37,21 +37,21 @@ def find_elf_file():
 def main():
     parser = argparse.ArgumentParser(description='esp-open-rtos output filter tool', prog='filteroutput')
     parser.add_argument(
-        '--elf', '-e',
-        help="ELF file (*.out file) to load symbols from (if not supplied, will search for one)"),
+            '--elf', '-e',
+            help="ELF file (*.out file) to load symbols from (if not supplied, will search for one)"),
     parser.add_argument(
-        '--port', '-p',
-        help='Serial port to monitor (will monitor stdin if None)',
-        default=None)
+            '--port', '-p',
+            help='Serial port to monitor (will monitor stdin if None)',
+            default=None)
     parser.add_argument(
-        '--baud', '-b',
-        help='Baud rate for serial port',
-        type=int,
-        default=74880)
+            '--baud', '-b',
+            help='Baud rate for serial port',
+            type=int,
+            default=74880)
     parser.add_argument(
-        '--reset-on-connect', '-r',
-        help='Reset ESP8266 (via DTR) on serial connect. (Linux resets even if not set, except when using NodeMCU-style auto-reset circuit.)',
-        action='store_true')
+            '--reset-on-connect', '-r',
+            help='Reset ESP8266 (via DTR) on serial connect. (Linux resets even if not set, except when using NodeMCU-style auto-reset circuit.)',
+            action='store_true')
 
     args = parser.parse_args()
 
@@ -74,13 +74,13 @@ def main():
         print("Reading from stdin...")
         port = sys.stdin
         # disable echo
-	try:
+        try:
             old_attr = termios.tcgetattr(sys.stdin.fileno())
-	    attr = termios.tcgetattr(sys.stdin.fileno())
-	    attr[3] = attr[3] & ~termios.ECHO
-	    termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, attr)
-	except termios.error:
-	     pass
+            attr = termios.tcgetattr(sys.stdin.fileno())
+            attr[3] = attr[3] & ~termios.ECHO
+            termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, attr)
+        except termios.error:
+            pass
 
     try:
         while True:
