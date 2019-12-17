@@ -14,6 +14,7 @@
 #include <semphr.h>
 
 #include "utils.h"
+#include "mqtt_utils.h"
 
 SemaphoreHandle_t wifi_alive;
 
@@ -85,4 +86,5 @@ void user_init(void)
     vSemaphoreCreateBinary(wifi_alive);
     xTaskCreate(&wifi_task, "wifi_task", 256, NULL, 2, NULL);
     xTaskCreate(&beat_task, "beat_task", 256, NULL, 3, NULL);
+    xTaskCreate(&mqtt_task, "mqtt_task", 1024, (void*)wifi_alive, 4, NULL);
 }
