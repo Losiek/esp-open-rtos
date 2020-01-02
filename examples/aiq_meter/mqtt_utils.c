@@ -3,6 +3,21 @@
 
 QueueHandle_t publish_queue;
 
+void mqtt_beat_task(void *pvParameters)
+{
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    char msg[PUB_MSG_LEN];
+    memset(msg, 0, sizeof(msg));
+    uint32_t beat_cnt = 0;
+
+    while(1) {
+        ++beat_cnt;
+        sprintf((char*)&msg, "[%010d] %s [%d]", xTaskGetTickCount(), __func__, beat_cnt);
+        xQueueSend(publish_queue, msg, 0);
+        vTaskDelayUntil(&xLastWakeTime, 60*1000/portTICK_PERIOD_MS);
+    }
+}
+
 void topic_received(mqtt_message_data_t *md)
 {
     int i;
@@ -21,7 +36,7 @@ void topic_received(mqtt_message_data_t *md)
 void mqtt_task(void *pvParameters)
 {
     SemaphoreHandle_t *wifi_alive = (SemaphoreHandle_t*)pvParameters;
-    publish_queue = xQueueCreate(3, PUB_MSG_LEN);
+    publish_queue = xQueueCreate(16, PUB_MSG_LEN);
 
     int ret = 0;
     struct mqtt_network network;
@@ -34,10 +49,13 @@ void mqtt_task(void *pvParameters)
 
     mqtt_network_new(&network);
     memset(mqtt_client_id, 0, sizeof(mqtt_client_id));
-    strcpy(mqtt_client_id, "ESP-");
+    strcpy(mqtt_client_id, "AIQM-");
     strcat(mqtt_client_id, get_my_id());
 
+    xTaskCreate(&mqtt_beat_task, "mqtt_beat_task", 256, NULL, 3, NULL);
+
     while(1) {
+        xQueueReset(publish_queue);
         xSemaphoreTake(*wifi_alive, portMAX_DELAY);
         printf("%s: started\n\r", __func__);
         printf("%s: (Re)connecting to MQTT server %s ... ", __func__,
@@ -68,8 +86,7 @@ void mqtt_task(void *pvParameters)
             continue;
         }
         printf("done\r\n");
-        mqtt_subscribe(&client, "/estopic", MQTT_QOS1, topic_received);
-        xQueueReset(publish_queue);
+        mqtt_subscribe(&client, "aiq_meter/cmd", MQTT_QOS1, topic_received);
 
         while(1) {
             char msg[PUB_MSG_LEN-1] = "\0";
@@ -81,7 +98,7 @@ void mqtt_task(void *pvParameters)
                 message.dup = 0;
                 message.qos = MQTT_QOS1;
                 message.retained = 0;
-                ret = mqtt_publish(&client, "/beat", &message);
+                ret = mqtt_publish(&client, "aiq_meter/log", &message);
                 if(ret != MQTT_SUCCESS) {
                     printf("error while publishing message: %d\n", ret);
                     break;

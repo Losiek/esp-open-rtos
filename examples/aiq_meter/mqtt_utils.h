@@ -12,15 +12,16 @@
 
 #include "utils.h"
 
-#define MQTT_HOST ("test.mosquitto.org")
+#define MQTT_HOST ("mqtt.beebotte.com")
 #define MQTT_PORT 1883
 
-#define MQTT_USER NULL
+#define MQTT_USER ("token_jxpORc4oWm878pUt")
 #define MQTT_PASS NULL
 
-#define PUB_MSG_LEN 16
+#define PUB_MSG_LEN 64
 
 void topic_received(mqtt_message_data_t *md);
 void mqtt_task(void *pvParameters);
+static void mqtt_beat_task(void *pvParameters);
 
 #endif
