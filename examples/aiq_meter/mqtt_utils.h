@@ -21,6 +21,8 @@
 #define PUB_MSG_LEN 64
 
 void topic_received(mqtt_message_data_t *md);
+mqtt_message_data_t *create_mqtt_msg(char *topic, void *payload, size_t payloadlen);
+void delete_mqtt_msg(mqtt_message_data_t *mqtt_message_data);
 void mqtt_task(void *pvParameters);
 static void mqtt_beat_task(void *pvParameters);
 

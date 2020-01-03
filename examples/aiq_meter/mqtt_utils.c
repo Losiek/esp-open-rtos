@@ -1,5 +1,8 @@
 // MQTT functions
 #include "mqtt_utils.h"
+#include "dbg.h"
+
+#undef NDEBUG
 
 QueueHandle_t publish_queue;
 
@@ -9,13 +12,15 @@ void mqtt_beat_task(void *pvParameters)
     char msg[PUB_MSG_LEN];
     memset(msg, 0, sizeof(msg));
     uint32_t beat_cnt = 0;
+    mqtt_message_data_t *mqtt_msg_p = create_mqtt_msg("aiq_meter/log", (void*)&msg, PUB_MSG_LEN);
 
     while(1) {
         ++beat_cnt;
         sprintf((char*)&msg, "[%010d] %s [%d]", xTaskGetTickCount(), __func__, beat_cnt);
-        xQueueSend(publish_queue, msg, 0);
+        xQueueSend(publish_queue, (void*)&mqtt_msg_p, 0);
         vTaskDelayUntil(&xLastWakeTime, 60*1000/portTICK_PERIOD_MS);
     }
+    delete_mqtt_msg(mqtt_msg_p);
 }
 
 void topic_received(mqtt_message_data_t *md)
@@ -33,10 +38,49 @@ void topic_received(mqtt_message_data_t *md)
     printf("\r\n");
 }
 
+mqtt_message_data_t *create_mqtt_msg(char *topic, void *payload, size_t payloadlen)
+{
+    mqtt_string_t        *mqtt_topic_str;
+    mqtt_message_data_t  *mqtt_message_data;
+    mqtt_message_t       *mqtt_message;
+
+    mqtt_topic_str      = (mqtt_string_t*)malloc(sizeof(mqtt_string_t));
+    mqtt_message_data   = (mqtt_message_data_t*)malloc(sizeof(mqtt_message_handler_t));
+    mqtt_message        = (mqtt_message_t*)malloc(sizeof(mqtt_message_t));
+
+    check_mem(mqtt_topic_str)
+    check_mem(mqtt_message_data)
+    check_mem(mqtt_message)
+
+    mqtt_topic_str->lenstring.len = 0;
+    mqtt_topic_str->lenstring.data = NULL;
+    mqtt_topic_str->cstring = (char*)topic;
+
+    mqtt_message->payload = payload;
+    mqtt_message->payloadlen = payloadlen;
+    mqtt_message->dup = 0;
+    mqtt_message->qos = MQTT_QOS1;
+    mqtt_message->retained = 0;
+
+    mqtt_message_data->topic = mqtt_topic_str;
+    mqtt_message_data->message = mqtt_message;
+
+    return mqtt_message_data;
+
+error:
+    return NULL;
+}
+
+void delete_mqtt_msg(mqtt_message_data_t *mqtt_message_data)
+{
+    free(mqtt_message_data->message);
+    free(mqtt_message_data);
+}
+
 void mqtt_task(void *pvParameters)
 {
     SemaphoreHandle_t *wifi_alive = (SemaphoreHandle_t*)pvParameters;
-    publish_queue = xQueueCreate(16, PUB_MSG_LEN);
+    publish_queue = xQueueCreate(32, sizeof(mqtt_message_data_t*));
 
     int ret = 0;
     struct mqtt_network network;
@@ -88,17 +132,13 @@ void mqtt_task(void *pvParameters)
         printf("done\r\n");
         mqtt_subscribe(&client, "aiq_meter/cmd", MQTT_QOS1, topic_received);
 
+        mqtt_message_data_t *mqtt_message_data_p;
+
         while(1) {
-            char msg[PUB_MSG_LEN-1] = "\0";
-            while(xQueueReceive(publish_queue, (void*)msg, 0) == pdTRUE) {
+            while(xQueueReceive(publish_queue, (mqtt_message_data_t*)&mqtt_message_data_p, 0) == pdTRUE) {
                 printf("got message to publish\r\n");
-                mqtt_message_t message;
-                message.payload = msg;
-                message.payloadlen = PUB_MSG_LEN;
-                message.dup = 0;
-                message.qos = MQTT_QOS1;
-                message.retained = 0;
-                ret = mqtt_publish(&client, "aiq_meter/log", &message);
+                ret = mqtt_publish(&client, mqtt_message_data_p->topic->cstring, mqtt_message_data_p->message);
+                ret = MQTT_SUCCESS;
                 if(ret != MQTT_SUCCESS) {
                     printf("error while publishing message: %d\n", ret);
                     break;
