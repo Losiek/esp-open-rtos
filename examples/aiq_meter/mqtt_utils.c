@@ -6,6 +6,8 @@
 
 QueueHandle_t publish_queue;
 
+static void mqtt_beat_task(void *pvParameters);
+
 void mqtt_beat_task(void *pvParameters)
 {
     TickType_t xLastWakeTime = xTaskGetTickCount();
